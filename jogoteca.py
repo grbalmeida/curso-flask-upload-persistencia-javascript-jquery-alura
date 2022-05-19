@@ -3,6 +3,7 @@ from models import Jogo
 from dao import JogoDao, UsuarioDao
 from flask_mysqldb import MySQL
 import os
+import time
 
 app = Flask(__name__)
 app.secret_key = 'alura'
@@ -40,8 +41,10 @@ def criar():
     jogo = jogo_dao.salvar(jogo)
 
     arquivo = request.files['arquivo']
-    upload_path = app.config['UPLOAD_PATH']
-    arquivo.save(f'{upload_path}/capa{jogo.id}.jpg')
+    if arquivo:
+        upload_path = app.config['UPLOAD_PATH']
+        timestamp = time.time()
+        arquivo.save(f'{upload_path}/capa{jogo.id}-{timestamp}.jpg')
 
     return redirect(url_for('index'))
 
@@ -51,8 +54,8 @@ def editar(id):
         return redirect(url_for('login', proxima=url_for('editar')))
 
     jogo = jogo_dao.buscar_por_id(id)
-    capa_jogo = f'capa{id}.jpg'
-    return render_template('editar.html', titulo='Editando Jogo', jogo=jogo, capa_jogo=capa_jogo)
+    nome_imagem = recupera_imagem(id)
+    return render_template('editar.html', titulo='Editando Jogo', jogo=jogo, capa_jogo=nome_imagem)
 
 @app.route('/atualizar', methods=['POST',])
 def atualizar():
@@ -62,10 +65,13 @@ def atualizar():
     console = request.form['console']
     jogo = Jogo(nome, categoria, console, id=id)
     jogo_dao.salvar(jogo)
+
     arquivo = request.files['arquivo']
     if arquivo:
         upload_path = app.config['UPLOAD_PATH']
-        arquivo.save(f'{upload_path}/capa{jogo.id}.jpg')
+        timestamp = time.time()
+        deleta_arquivo(jogo.id)
+        arquivo.save(f'{upload_path}/capa{jogo.id}-{timestamp}.jpg')
     return redirect(url_for('index'))
 
 @app.route('/deletar/<int:id>')
@@ -105,5 +111,18 @@ def logout():
 @app.route('/uploads/<nome_arquivo>')
 def imagem(nome_arquivo):
     return send_from_directory('uploads', nome_arquivo)
+
+def recupera_imagem(id):
+    for nome_arquivo in os.listdir(app.config['UPLOAD_PATH']):
+        if f'capa{id}' in nome_arquivo:
+            return nome_arquivo
+
+    return 'capa_padrao.jpg'
+
+def deleta_arquivo(id):
+    arquivo = recupera_imagem(id)
+
+    if arquivo not in 'capa_padrao.jpg':
+        os.remove(os.path.join(app.config['UPLOAD_PATH'], arquivo))
 
 app.run(debug=True)
