@@ -1,32 +1,32 @@
 from flask import Flask, render_template, request, redirect, session, flash, url_for
-
-class Jogo:
-    def __init__(self, nome, categoria, console):
-        self.nome = nome
-        self.categoria = categoria
-        self.console = console
+from models import Jogo, Usuario
+from dao import JogoDao
+from flask_mysqldb import MySQL
 
 jogo1 = Jogo('Tetris', 'Puzzle', 'Atari')
 jogo2 = Jogo('God of War', 'Rack n Slash', 'PS2')
 jogo3 = Jogo('Mortal Kombat', 'Luta', 'PS2')
 lista = [jogo1, jogo2, jogo3]
 
-class Usuario:
-    def __init__(self, nome, nickname, senha):
-        self.nome = nome
-        self.nickname = nickname
-        self.senha = senha
+usuario1 = Usuario('BD', 'Bruno Divino', 'alohomora')
+usuario2 = Usuario('Mila', 'Camila Ferreira', 'paozinho')
+usuario3 = Usuario('Cake', 'Guilherme Louro', 'python_eh_vida')
 
-usuario1 = Usuario('Bruno Divino', 'BD', 'alohomora')
-usuario2 = Usuario('Camila Ferreira', 'Mila', 'paozinho')
-usuario3 = Usuario('Guilherme Louro', 'Cake', 'python_eh_vida')
-
-usuarios = { usuario1.nickname: usuario1,
-             usuario2.nickname: usuario2,
-             usuario3.nickname: usuario3 }
+usuarios = { usuario1.id: usuario1,
+             usuario2.id: usuario2,
+             usuario3.id: usuario3 }
 
 app = Flask(__name__)
 app.secret_key = 'alura'
+
+app.config['MYSQL_HOST'] = "localhost"
+app.config['MYSQL_USER'] = "root"
+app.config['MYSQL_PASSWORD'] = "root"
+app.config['MYSQL_DB'] = "jogoteca"
+app.config['MYSQL_PORT'] = 3306
+db = MySQL(app)
+
+jogo_dao = JogoDao(db)
 
 @app.route('/')
 def index():
@@ -45,7 +45,7 @@ def criar():
     categoria = request.form['categoria']
     console = request.form['console']
     jogo = Jogo(nome, categoria, console)
-    lista.append(jogo)
+    jogo_dao.salvar(jogo)
 
     return redirect(url_for('index'))
 
@@ -59,8 +59,8 @@ def autenticar():
     if request.form['usuario'] in usuarios:
         usuario = usuarios[request.form['usuario']]
         if request.form['senha'] == usuario.senha:
-            session['usuario_logado'] = usuario.nickname
-            flash(usuario.nickname + ' logado com sucesso!')
+            session['usuario_logado'] = usuario.id
+            flash(usuario.id + ' logado com sucesso!')
             proxima_pagina = request.form['proxima']
 
             if proxima_pagina:
