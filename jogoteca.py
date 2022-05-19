@@ -1,20 +1,7 @@
 from flask import Flask, render_template, request, redirect, session, flash, url_for
 from models import Jogo, Usuario
-from dao import JogoDao
+from dao import JogoDao, UsuarioDao
 from flask_mysqldb import MySQL
-
-jogo1 = Jogo('Tetris', 'Puzzle', 'Atari')
-jogo2 = Jogo('God of War', 'Rack n Slash', 'PS2')
-jogo3 = Jogo('Mortal Kombat', 'Luta', 'PS2')
-lista = [jogo1, jogo2, jogo3]
-
-usuario1 = Usuario('BD', 'Bruno Divino', 'alohomora')
-usuario2 = Usuario('Mila', 'Camila Ferreira', 'paozinho')
-usuario3 = Usuario('Cake', 'Guilherme Louro', 'python_eh_vida')
-
-usuarios = { usuario1.id: usuario1,
-             usuario2.id: usuario2,
-             usuario3.id: usuario3 }
 
 app = Flask(__name__)
 app.secret_key = 'alura'
@@ -27,9 +14,11 @@ app.config['MYSQL_PORT'] = 3306
 db = MySQL(app)
 
 jogo_dao = JogoDao(db)
+usuario_dao = UsuarioDao(db)
 
 @app.route('/')
 def index():
+    lista = jogo_dao.listar()
     return render_template('lista.html', titulo='Jogos', jogos=lista)
 
 @app.route('/novo')
@@ -56,11 +45,11 @@ def login():
 
 @app.route('/autenticar', methods=['POST',])
 def autenticar():
-    if request.form['usuario'] in usuarios:
-        usuario = usuarios[request.form['usuario']]
-        if request.form['senha'] == usuario.senha:
+    usuario = usuario_dao.buscar_por_id(request.form['usuario'])
+    if usuario:
+        if usuario.senha == request.form['senha']:
             session['usuario_logado'] = usuario.id
-            flash(usuario.id + ' logado com sucesso!')
+            flash(usuario.nome + ' logado com sucesso!')
             proxima_pagina = request.form['proxima']
 
             if proxima_pagina:
